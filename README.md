@@ -1,2 +1,394 @@
 # Cyclistic Bike-Share Case Study
-How do annual members and casual riders use Cyclistic bikes differently?
+---
+title: "Case Study 1"
+author: "Rui Neves"
+date: "2025-09-10"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Ask
+
+* Business Task: Identify how annual members and casual riders use Cyclistic differently.
+* Goal: Design marketing strategies aimed at converting casual riders into annual members.
+* Why this matters: Annual members are more profitable than casual riders.
+* Question: How do annual members and casual riders use Cyclistic bikes differently?
+* Stakeholders: Lily Moreno (Director of Marketing), Marketing Analytics Team, and Cyclistic Executive Team.
+
+## Prepare
+
+* Data Source: Public Divvy bike-share datasets (2019 Q1 and 2020 Q1).
+* Format of File: CSVs with ride-level details (e.g., start time, end time, type of bike, user type, etc)
+* Bias & Credibility (ROCCC framework): The datasets are Reliable, Original, Comprehensive, Current, and Cited.
+* Limitations: Unable to get access to all information due to data-privacy issues (e.g., credit card numbers to determine if casual riders live in a Cyclistic service area of if they have purchased multiple single passes)
+The data has been made available by Motivate International Inc. under this [license](https://divvybikes.com/data-license-agreement).
+
+## Process
+
+* 1. Installing proper packages for wrangling and date-time manipulation (tidyverse and lubridate) is key. Don't forget to load them using the library function!
+
+```{r}
+install.packages("tidyverse")
+install.packages("lubridate")
+library(tidyverse)
+library(lubridate)
+```
+
+* 2. Load both datasets 2019 and 2020 Q1 using the read.csv function and give them a short and practical name.
+
+```{r}
+q1_2019 <- read.csv("Divvy_Trips_2019_Q1.csv")
+q1_2020 <- read.csv("Divvy_Trips_2020_Q1.csv")
+```
+
+* 3. Inspect the data (e.g., check datasets structure, column names, missing values, consistency of data, etc). 
+
+Using glimpse let's you see columns' name and type (int, chr, dbl, etc) whereas summary gives you the main key metrics of each variable (minimum, mean, maximum, etc).
+
+```{r}
+glimpse(q1_2019)
+glimpse(q1_2020)
+summary(q1_2019)
+summary(q1_2020)
+```
+
+Although you get a sense of missing values with the summary function, there's a quicker way to check NA values in each column by using the colSums function with is.na (i.e., sum of NA cells in each column).
+
+```{r}
+colSums(is.na(q1_2019))
+colSums(is.na(q1_2020))
+```
+
+* 4. The two datasets are using different naming conventions (e.g., trip_id in q1_2019 vs ride_id in q1_2020) so it's important to standardize column names in order to combine them. I'll rename q1_2019 to be updated and with a common name schema as q1_2020.
+
+```{r}
+q1_2019_clean <- q1_2019 %>%
+  rename(
+    ride_id = trip_id,
+    started_at = start_time,
+    ended_at = end_time,
+    start_station_id = from_station_id,
+    start_station_name = from_station_name,
+    end_station_id = to_station_id,
+    end_station_name = to_station_name,
+    member_casual = usertype
+    ) %>%
+  mutate(
+    rideable_type = "classic_bike",
+    member_casual = ifelse(member_casual == "Subscriber","member","casual")
+  ) %>%
+  select(
+    ride_id, rideable_type, started_at, ended_at, start_station_name, start_station_id, end_station_name, end_station_id, member_casual
+  )
+```
+
+Since q1_2019 didn't have rideable_type we keep it as is in q1_2020. Also, because q1_2019 uses "Subscriber" and "Customer" and q1_2020 uses "member" and "casual" for type of member, q1_2019 should be matched and converted to use q1_2020 terms.
+
+A few columns were deleted in q1_2019_clean so we should the same for q1_2020.
+
+```{r}
+q1_2020_clean <- q1_2020 %>%
+  select(
+    ride_id, rideable_type, started_at, ended_at,
+    start_station_name, start_station_id,
+    end_station_name, end_station_id,
+    member_casual
+  )
+```
+
+* 5. Before merging, we should check and convert the data types to their proper formats. 
+
+    )
+```{r}
+q1_2019_clean <- q1_2019_clean %>%
+  mutate(
+    started_at = ymd_hms(started_at),
+    ended_at = ymd_hms(ended_at),
+    start_station_id = as.character(start_station_id),
+    end_station_id = as.character(end_station_id),
+    ride_id = as.character(ride_id),
+    member_casual = as.factor(member_casual),
+    rideable_type = as.factor(rideable_type)
+  )
+
+q1_2020_clean <- q1_2020_clean %>%
+  mutate(
+    started_at = ymd_hms(started_at),
+    ended_at = ymd_hms(ended_at),
+    start_station_id = as.character(start_station_id),
+    end_station_id = as.character(end_station_id),
+    ride_id = as.character(ride_id),
+    member_casual = as.factor(member_casual),
+    rideable_type = as.factor(rideable_type)
+  )
+```
+
+* 6. Now that both datasets' schemas match, we can merge them.
+
+```{r}
+trips <- bind_rows(q1_2019_clean, q1_2020_clean)
+```
+
+* 7. Now that both datasets are merged we can start creating new time and date-based dimensions.
+
+```{r}
+trips <- trips %>%
+  mutate(
+    ride_length = as.numeric(difftime(ended_at, started_at, units = "mins")),
+    day_of_week = wday(started_at, label = TRUE, abbr = FALSE),
+    month = month(started_at, label = TRUE, abbr = TRUE),
+    year = year(started_at)
+  )
+```
+
+* 8. Now that we have new dimensions it's time to eliminate bad data, i.e., records that are likely typos/errors (e.g., bike rides with 1m or less or longer than 24h). Missing data on station's name was also eliminated (only whole available trips were considered).
+
+```{r}
+trips <- trips %>%
+  filter(
+    ride_length > 1,
+    ride_length < 1440,
+    !is.na(start_station_name),
+    !is.na(end_station_name)
+  )
+```
+
+* 9. In order to verify if your data cleaning was successful, run again the summary function specifically for the ride_length variable.
+
+```{r}
+summary(trips$ride_length)
+any(is.na(trips))
+```
+
+* 10. Before moving on to data analysis, we should do a quick sanity check to ensure everything is in order to move to the next step. For that, I am going to do a histogram of the ride lengths that will allow me to see the most common ride lengths, outliers, number of rides at either extreme, gaps in the data. 
+
+```{r}
+trips %>%
+  ggplot(aes(x=ride_length)) +
+  geom_histogram(binwidth = 5) +
+  xlim(0,120) +
+  labs(title = "Distribution of ride lengths (0-120mins)")
+```
+
+* 11. Lastly, don't forget to keep a clean version for data analysis. Save your work!
+
+```{r}
+write.csv(trips, "cleaned_trips.csv")
+```
+
+## Analyze
+
+A reminder of the business task at hands: How do annual members and casual riders use Cyclistic bikes differently?
+
+Key variables crucial to analyze are ride lengths, frequency, timing, station usability, and deeper insights, seasonality and geospatial trends will be further explored.
+
+We should start with the basics - descriptive statistics.
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual) %>%
+  summarise(
+    total_rides = n(),
+    avg_duration = mean(ride_length, na.rm=TRUE),
+    median_duration = median(ride_length, na.rm=TRUE),
+    max_duration = max(ride_length, na.rm=TRUE)
+  )
+```
+
+Next, I am going to look into monthly, weekly, daily, and hourly patterns.
+For the number of rides by day of week:
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual, day_of_week) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = day_of_week, y = rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title = "Rides by day of week")
+```
+
+For the average ride duration by day of week:
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual, day_of_week) %>%
+  summarise(avg_duration = mean(ride_length), .groups="drop") %>%
+  ggplot(aes(x = day_of_week, y = avg_duration, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title = "Average ride duration by day of week")
+```
+
+For the time of day when riders are most active:
+
+```{r}
+cleaned_trips %>%
+  mutate(hour = hour(started_at)) %>%
+  group_by(member_casual, hour) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = hour, y = rides, color = member_casual)) + 
+  geom_line (linewidth = 1.2) +
+  labs(title = "Hourly ride trends")
+```
+
+For the time of year when rides are most active:
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual, month) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = month, y = rides, group = member_casual, color = member_casual)) +
+  geom_line (linewidth = 1.2) +
+  labs(title = "Monthly seasonality of rides")
+```
+
+Let's look at station popularity:
+```{r}
+top_stations <- cleaned_trips %>%
+  group_by(member_casual, start_station_name) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  arrange(desc(rides)) %>%
+  group_by(member_casual) %>%
+  slice_head(n = 10)
+```
+
+Now let's do some deeper analysis on ride duration distribution:
+
+```{r}
+cleaned_trips %>%
+  ggplot(aes(x = member_casual, y = ride_length, fill = member_casual)) +
+  geom_boxplot(outlier.alpha = 0.2) +
+  coord_cartesian(ylim = c(0,120)) +
+  labs(title = "Ride duration distribution (0-120mins)")
+```
+
+Let's compare weekday vs weekend rides:
+
+```{r}
+cleaned_trips %>%
+  mutate(weekend = ifelse(day_of_week %in% c("Saturday", "Sunday"), "Weekend", "Weekday")) %>%
+  group_by(member_casual, weekend) %>%
+  summarise(avg_duration = mean(ride_length), total_rides = n(), .groups = "drop")
+```
+
+For a more advanced look into the rides we can create clusters and divide trips into shorter rides, during rush hour (commuting; cluster 1), rides during the day (likely errands; cluster 2), and longer rides, during the weekends (leisure; cluster 3).
+
+```{r}
+set.seed(42)
+sample_trips <- cleaned_trips %>% sample_n(10000) %>%
+  mutate(hour = hour(started_at))
+
+cluster_data <- sample_trips %>%
+  select(ride_length, hour) %>%
+  na.omit()
+
+clusters <- kmeans(scale(cluster_data), centers = 3, nstart = 25)
+
+sample_trips$cluster <- as.factor(clusters$cluster)
+
+ggplot(sample_trips, aes(x=hour, y=ride_length, color=cluster)) +
+  geom_point(alpha = 0.3) +
+  labs(title = "Clusters of riding patterns")
+```
+
+## Share
+
+Finishing the analysis part, we should focus on building a compelling narrative around data using storytelling.
+
+My audience is the Cyclistic executive team which is detail_oriented and non-technical.
+
+The key message to build around a narrative is that members take shorter, frequent and more weekday trips (also known as commuters) and the casual rides take longer, less frequent and more weekend rides (also known as leisure users).
+
+The volume of rides by user type. The graphic shows how members take far more trips than casual users.
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual) %>%
+  summarise(rides = n()) %>%
+  ggplot(aes(x = member_casual, y = rides, fill = member_casual)) +
+  geom_col() +
+  labs(title = "Total Rides: Members vs Casual Riders",
+       x = "Rider Type", y = "Number of Rides") +
+  theme_minimal()
+```
+
+Casual rides skew much longer than members which peak quite rapidly (commuting vs leisure rides).
+
+```{r}
+cleaned_trips %>%
+  ggplot(aes(x = ride_length, fill = member_casual)) +
+  geom_density(alpha = 0.4) +
+  xlim(0, 120) +
+  labs(title = "Ride Duration Distribution (Up to 2 Hours)",
+       x = "Ride Length (minutes)", y = "Density") +
+  theme_minimal()
+```
+
+Members' number of rides peak during the week from Monday to Friday (commuting) and diminish during the weekend. Casual rides showcase the opposite pattern, peaking during the weekend (leisure) and diminishing during the week.
+
+```{r}
+cleaned_trips %>%
+  group_by(member_casual, day_of_week) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = day_of_week, y = rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title = "Weekly Ride Patterns by Rider Type",
+       x = "Day of Week", y = "Number of Rides") +
+  theme_minimal()
+```
+
+Members hourly trends showcase a peak at 8h and then at 17h (going to and coming off work) whereas casual riders usage trend midday.
+
+```{r}
+cleaned_trips %>%
+  mutate(hour = lubridate::hour(started_at)) %>%
+  group_by(member_casual, hour) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = hour, y = rides, color = member_casual)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "Hourly Ride Trends by Rider Type",
+       x = "Hour of Day", y = "Rides") +
+  theme_minimal()
+```
+
+Members most popular starting stations are streets, boulevards, and avenues - more urban/business/downtown areas.
+Casuals most popular starting stations are lakes, parks, and other attractions - more tourist attractions.
+
+```{r}
+top_stations <- cleaned_trips %>%
+  group_by(member_casual, start_station_name) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  arrange(desc(rides)) %>%
+  group_by(member_casual) %>%
+  slice_head(n = 10)
+
+ggplot(top_stations, aes(x = reorder(start_station_name, rides), y = rides, fill = member_casual)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Top 10 Start Stations by Rider Type",
+       x = "Station", y = "Number of Rides") +
+  theme_minimal()
+```
+
+This graphic shows when are the stations most occupied during the day. Members stress the system during rush hours and casual users more during the afternoons and weekends.
+
+```{r}
+cleaned_trips %>%
+  mutate(hour = hour(started_at)) %>%
+  group_by(member_casual, day_of_week, hour) %>%
+  summarise(rides = n(), .groups = "drop") %>%
+  ggplot(aes(x = hour, y = day_of_week, fill = rides)) +
+  geom_tile() +
+  facet_wrap(~member_casual) +
+  labs(title = "Heatmap of Usage Patterns") +
+  theme_minimal()
+```
+
+* Key takeaways:
+- Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
+- Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
+- This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
