@@ -14,13 +14,13 @@ knitr::opts_chunk$set(echo = TRUE)
 - Cyclistic is a bike-share program that features more than 5,800 bicycles and 600 docking stations.
 - My task is to identify how annual members (vs casual riders) differ in the use of the Cyclistic program.
 - Key takeaways are: 
-  Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
-  Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
-  This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
+  1) Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
+  2) Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
+  3) This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
 - My recommendations are:
-  For casual riders, highlight the convenience for commuting (e.g., unlimited rides, saves money).
-  Target digital ads/social media for tourists and casual riders, showcasing the true value of annual plans for more frequent outgoing leisure rides (e.g., health benefits, spend time with family).
-  Create discounted annual memberships for tourists (possibly during the summer) who take more multiple long weekend rides.
+  1) For casual riders, highlight the convenience for commuting (e.g., unlimited rides, saves money).
+  2) Target digital ads/social media for tourists and casual riders, showcasing the true value of annual plans for more frequent outgoing leisure rides (e.g., health benefits, spend time with family).
+  3) Create discounted annual memberships for tourists (possibly during the summer) who take more multiple long weekend rides.
 
 ## Ask
 
@@ -386,20 +386,14 @@ ggplot(top_stations, aes(x = reorder(start_station_name, rides), y = rides, fill
 
 This graphic shows when are the stations most occupied during the day. Members stress the system during rush hours and casual users more during the afternoons and weekends.
 
-```{r}
-cleaned_trips %>%
-  mutate(hour = hour(started_at)) %>%
-  group_by(member_casual, day_of_week, hour) %>%
-  summarise(rides = n(), .groups = "drop") %>%
-  ggplot(aes(x = hour, y = day_of_week, fill = rides)) +
-  geom_tile() +
-  facet_wrap(~member_casual) +
-  labs(title = "Heatmap of Usage Patterns") +
-  theme_minimal()
-```
-
-* Key takeaways:
+* The key takeaways are:
 - Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
 - Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
 - This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
 
+## Act
+
+Here's my 3 actionable recommendations:
+- For casual riders, highlight the convenience for commuting (e.g., unlimited rides, saves money)
+- Target digital ads/social media for tourists and casual riders, showcasing the true value of annual plans for more frequent outgoing leisure rides (e.g., health benefits, spend time with family)
+- Create discounted annual memberships for tourists (possibly during the summer) who take more multiple long weekend rides.
