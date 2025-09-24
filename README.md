@@ -1,3 +1,15 @@
+* A quick glimpse of the case study:
+- Cyclistic is a bike-share program that features more than 5,800 bicycles and 600 docking stations.
+- My task is to identify how annual members (vs casual riders) differ in the use of the Cyclistic program.
+- Key takeaways are: 
+  1) Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
+  2) Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
+  3) This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
+- My recommendations are:
+  1) For casual riders, highlight the convenience for commuting (e.g., unlimited rides, saves money).
+  2) Target digital ads/social media for tourists and casual riders, showcasing the true value of annual plans for more frequent outgoing leisure rides (e.g., health benefits, spend time with family).
+  3) Create discounted annual memberships for tourists (possibly during the summer) who take more multiple long weekend rides.
+
 ## Ask
 
 * Business Task: Identify how annual members and casual riders use Cyclistic differently.
@@ -11,7 +23,7 @@
 * Data Source: Public Divvy bike-share datasets (2019 Q1 and 2020 Q1).
 * Format of File: CSVs with ride-level details (e.g., start time, end time, type of bike, user type, etc)
 * Bias & Credibility (ROCCC framework): The datasets are Reliable, Original, Comprehensive, Current, and Cited.
-* Limitations: Unable to get access to all information due to data-privacy issues (e.g., credit card numbers to determine if casual riders live in a Cyclistic service area of if they have purchased multiple single passes)
+* Limitations: Due to memory limit, I am only able to use 2019 and 2020 Q1 data. I'm also unable to get access to all information due to data-privacy issues (e.g., credit card numbers to determine if casual riders live in a Cyclistic service area of if they have purchased multiple single passes).
 The data has been made available by Motivate International Inc. under this [license](https://divvybikes.com/data-license-agreement).
 
 ## Process
@@ -34,7 +46,7 @@ q1_2020 <- read.csv("Divvy_Trips_2020_Q1.csv")
 
 * 3. Inspect the data (e.g., check datasets structure, column names, missing values, consistency of data, etc). 
 
-Using glimpse let's you see columns' name and type (int, chr, dbl, etc) whereas summary gives you the main key metrics of each variable (minimum, mean, maximum, etc).
+Glimpse let's you see columns' name and type (int, chr, dbl, etc) whereas summary gives you the main key metrics of each variable (minimum, mean, maximum, etc).
 
 ```{r}
 glimpse(q1_2019)
@@ -50,7 +62,7 @@ colSums(is.na(q1_2019))
 colSums(is.na(q1_2020))
 ```
 
-* 4. The two datasets are using different naming conventions (e.g., trip_id in q1_2019 vs ride_id in q1_2020) so it's important to standardize column names in order to combine them. I'll rename q1_2019 to be updated and with a common name schema as q1_2020.
+* 4. The two datasets are using different naming conventions (e.g., trip_id in q1_2019 vs ride_id in q1_2020) so it's important to standardize column names in order to combine them. I'll rename q1_2019 to q1_2019_clean to be updated and with a common name schema as q1_2020.
 
 ```{r}
 q1_2019_clean <- q1_2019 %>%
@@ -362,19 +374,14 @@ ggplot(top_stations, aes(x = reorder(start_station_name, rides), y = rides, fill
 
 This graphic shows when are the stations most occupied during the day. Members stress the system during rush hours and casual users more during the afternoons and weekends.
 
-```{r}
-cleaned_trips %>%
-  mutate(hour = hour(started_at)) %>%
-  group_by(member_casual, day_of_week, hour) %>%
-  summarise(rides = n(), .groups = "drop") %>%
-  ggplot(aes(x = hour, y = day_of_week, fill = rides)) +
-  geom_tile() +
-  facet_wrap(~member_casual) +
-  labs(title = "Heatmap of Usage Patterns") +
-  theme_minimal()
-```
-
-* Key takeaways:
+* The key takeaways are:
 - Members take shorter, and more frequent rides during the weekday (Mond - Fri). Members tipically use the Cyclistic bikes to commute.
 - Casual users take longer, and less frequent rides during the weekend. Casual users tipically use the Cyclistic bikes as leisure or tourism.
 - This showcases an opportunity to target casual riders to start using more Cyclistic bikes during the weekday or other times of day. Target them with promotions for leisure-to-commuter conversion.
+
+## Act
+
+Here's my 3 actionable recommendations:
+- For casual riders, highlight the convenience for commuting (e.g., unlimited rides, saves money)
+- Target digital ads/social media for tourists and casual riders, showcasing the true value of annual plans for more frequent outgoing leisure rides (e.g., health benefits, spend time with family)
+- Create discounted annual memberships for tourists (possibly during the summer) who take more multiple long weekend rides.
