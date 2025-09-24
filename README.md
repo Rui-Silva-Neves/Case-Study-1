@@ -1,17 +1,3 @@
-# Cyclistic Bike-Share Case Study
----
-title: "Case Study 1"
-author: "Rui Neves"
-date: "2025-09-10"
-output:
-  pdf_document: default
-  html_document: default
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## Ask
 
 * Business Task: Identify how annual members and casual riders use Cyclistic differently.
