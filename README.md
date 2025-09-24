@@ -1,4 +1,4 @@
-* A quick glimpse of the case study:
+A brief summary of the case study:
 - Cyclistic is a bike-share program that features more than 5,800 bicycles and 600 docking stations.
 - My task is to identify how annual members (vs casual riders) differ in the use of the Cyclistic program.
 - Key takeaways are: 
